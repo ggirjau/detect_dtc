@@ -1,2 +1,2 @@
 # detect_dtc
-Perl script to parse given .dlt traces and detect anny active/inactive DTC in system.
+Perl script to parse given .dlt traces and detect any active/inactive DTC in system.
