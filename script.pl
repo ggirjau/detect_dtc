@@ -10,6 +10,7 @@ sub find_dtc {
 	my $find = 0;		# flag to check if any DTC was detected;
 	my $key;		# var to store detected raw or appeared DTC;
 	my $dtc_status = 0;	# var to store DTC status like : Active/Inactive
+	my $trace;		# hold actul trace in which a DTC was detected.
 
 	# open input .txt file with given .dlt traces;
 	open(IN_FILE, "<in.txt") or die "Couldn't open file in.txt, $!";
@@ -24,36 +25,66 @@ sub find_dtc {
 
 	
 	for (@dlt_line) {
-		if ($_ =~/(DTC..0x)(......)(.Status..)(0x.)/) {
+		# Print DTCs - detect raw DTC
+		if ($_ =~/(DTC..0x)(\d{6})(.Status..)(0x.)/) {
 			$key = $2;
 			$dtc_status = $4;
+			$trace = $_;
 			
 			for (@lines) {
 				if ($_ =~/$key/) {
 					
 					if ($dtc_status =~/0x9/) {
 						print "Active or Raised :  -  $_\n";
-						print OUT_FILE "Active or Raised :  -  $_\n";
+						print OUT_FILE "$trace Active or Raised :  -  $_\n";
 					}
 					else {
 						print "Inactive or Cleared : -  $_\n";
-						print OUT_FILE "Inactive or Cleared :  -  $_\n";
+						print OUT_FILE "$trace Inactive or Cleared :  -  $_\n";
 					}
 					
 					$find = 1;
 				}
 			}
 		} 
+		# detect appearance of DTC
 		elsif ($_ =~/(................)(.DTC.:.)(........)/) {
 			$key = $3;
 			$dtc_status = $1;
+			$trace = $_;
+			
+			print $trace;
+			
 			for (@lines) {
 				if ($_ =~/$key/) {
 					print "$dtc_status :  - $_\n";
-					print OUT_FILE "$dtc_status :  - $_\n";
+					print OUT_FILE "$trace $dtc_status :  - $_\n";
 					$find = 1;
 				}
 			}
+		}
+		# ssw_DiagDtcStateChanged - buffer to be sent on RTP
+		elsif ($_ =~/(RTP.=.50.03.)(\d{2})(.\d{2})/){
+			$key = "0x"."$2";
+			$dtc_status = $3;
+			$trace = $_;
+			
+			for (@lines) {
+				if ($_ =~/$key/) {
+					
+					if ($dtc_status =~/01/) {
+						print "State changed as active via RTP for DTC :  -  $_\n";
+						print OUT_FILE "$trace State changed as active via RTP for DTC :  -  $_\n";
+					}
+					else {
+						print "State changed as inactive/cleared via RTP for DTC : - $_\n";
+						print OUT_FILE "$trace State changed as inactive/cleared via RTP for DTC:  -  $_\n";
+					}
+
+					$find = 1;
+				}
+			}
+
 		}
 	}
 	
@@ -67,5 +98,7 @@ sub find_dtc {
 }
 
 find_dtc ();
+
+
 
 
